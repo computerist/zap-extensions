@@ -51,6 +51,7 @@ var addOns = listOf(
     "jsonview",
     "jython",
     "kotlin",
+    "maxify",
     "onlineMenu",
     "openapi",
     "plugnhack",
