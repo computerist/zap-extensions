@@ -1,9 +1,27 @@
+/*
+ * Zed Attack Proxy (ZAP) and its related class files.
+ *
+ * ZAP is an HTTP/HTTPS proxy for assessing web application security.
+ *
+ * Copyright 2021 The ZAP Development Team
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.zaproxy.zap.extension.maxify;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
@@ -22,25 +40,25 @@ import org.zaproxy.zap.network.HttpResponseBody;
 import org.zaproxy.zap.view.ZapMenuItem;
 
 class LibInfo {
-	String filename;
-	String minSha256Digest;
-	String maxSha256Digest;
-	String minURI;
-	String maxURI;
+    String filename;
+    String minSha256Digest;
+    String maxSha256Digest;
+    String minURI;
+    String maxURI;
 }
 
 public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener {
-	private static final String NAME = "Maxify";
-	private static final String PREFIX = "maxify";
-	
-	private ZapMenuItem menuMaxifier;
-	
-	private Map<String, LibInfo> libsByFilename;
+    private static final String NAME = "Maxify";
+    private static final String PREFIX = "maxify";
+
+    private ZapMenuItem menuMaxifier;
+
+    private Map<String, LibInfo> libsByFilename;
 
     public ExtensionMaxifier() {
         super(NAME);
         setI18nPrefix(PREFIX);
-        
+
         this.libsByFilename = new HashMap<String, LibInfo>();
         LibInfo jquery224 = new LibInfo();
         jquery224.filename = "jquery-2.2.4.min.js";
@@ -55,23 +73,23 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
 
-        //this.api = new MaxifierAPI(this);
-        //extensionHook.addApiImplementor(this.api);
+        // this.api = new MaxifierAPI(this);
+        // extensionHook.addApiImplementor(this.api);
 
         // As long as we're not running as a daemon
         if (getView() != null) {
-        	extensionHook.getProxyListenerList().add(this);
-            //extensionHook.getHookMenu().addToolsMenuItem(getMenuMaxifier());
-            //extensionHook.getHookMenu().addPopupMenuItem(getPopupMsgMenuExample());
-            //extensionHook.getHookView().addStatusPanel(getStatusPanel());
+            extensionHook.getProxyListenerList().add(this);
+            // extensionHook.getHookMenu().addToolsMenuItem(getMenuMaxifier());
+            // extensionHook.getHookMenu().addPopupMenuItem(getPopupMsgMenuExample());
+            // extensionHook.getHookView().addStatusPanel(getStatusPanel());
         }
     }
 
     private ZapMenuItem getMenuMaxifier() {
         if (menuMaxifier == null) {
-        	menuMaxifier = new ZapMenuItem(PREFIX + ".topmenu.tools.title");
+            menuMaxifier = new ZapMenuItem(PREFIX + ".topmenu.tools.title");
 
-        	menuMaxifier.addActionListener(
+            menuMaxifier.addActionListener(
                     new java.awt.event.ActionListener() {
                         @Override
                         public void actionPerformed(java.awt.event.ActionEvent ae) {
@@ -82,90 +100,89 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
                                             Constant.messages.getString(
                                                     PREFIX + ".topmenu.tools.msg"));
                             // And display a file included with the add-on in the Output tab
-                            //displayFile(EXAMPLE_FILE);
+                            // displayFile(EXAMPLE_FILE);
                         }
                     });
         }
         return menuMaxifier;
     }
 
-	@Override
-	public int getArrangeableListenerOrder() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int getArrangeableListenerOrder() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public boolean onHttpRequestSend(HttpMessage msg) {
-		// TODO Auto-generated method stub
-		return true;
-	}
+    @Override
+    public boolean onHttpRequestSend(HttpMessage msg) {
+        // TODO Auto-generated method stub
+        return true;
+    }
 
-	@Override
-	public boolean onHttpResponseReceive(HttpMessage msg) {
-		System.out.println("onHttpResponseReceive");
-		try {
-			HttpResponseBody body = msg.getResponseBody();
-			URI requestURI = msg.getRequestHeader().getURI();
-			System.out.println("Inspecting... " + requestURI);
-			String path = requestURI.getPath();
-			int sepPos = path.lastIndexOf('/');
-			String filename = sepPos >= 0 ? path.substring(sepPos + 1): path;
-			System.out.println("Filename is " + filename);
-			if (this.libsByFilename.containsKey(filename)) {
-				System.out.println("filename matches!");
-				LibInfo libInfo = this.libsByFilename.get(filename);
-				String digestString = DigestUtils.sha256Hex(body.getBytes());
-				
-				// We can compare the served version with the expected digest of the minified script
-				if (digestString.equals(libInfo.minSha256Digest)) {
-					System.out.println("Minified script digests match!");
-				} else {
-					System.out.println("Expected: " + libInfo.minSha256Digest);
-					System.out.println("Got: " + digestString);
-				}
-				
-				// And then return the un-minified version
+    @Override
+    public boolean onHttpResponseReceive(HttpMessage msg) {
+        System.out.println("onHttpResponseReceive");
+        try {
+            HttpResponseBody body = msg.getResponseBody();
+            URI requestURI = msg.getRequestHeader().getURI();
+            System.out.println("Inspecting... " + requestURI);
+            String path = requestURI.getPath();
+            int sepPos = path.lastIndexOf('/');
+            String filename = sepPos >= 0 ? path.substring(sepPos + 1) : path;
+            System.out.println("Filename is " + filename);
+            if (this.libsByFilename.containsKey(filename)) {
+                System.out.println("filename matches!");
+                LibInfo libInfo = this.libsByFilename.get(filename);
+                String digestString = DigestUtils.sha256Hex(body.getBytes());
 
-	            final HttpMessage msg2 = new HttpMessage(new URI(libInfo.maxURI, true));
-	            HttpSender httpSender =
-	                    new HttpSender(
-	                            Model.getSingleton().getOptionsParam().getConnectionParam(),
-	                            true,
-	                            HttpSender.MANUAL_REQUEST_INITIATOR);
-	            httpSender.sendAndReceive(msg2, true);
+                // We can compare the served version with the expected digest of the minified script
+                if (digestString.equals(libInfo.minSha256Digest)) {
+                    System.out.println("Minified script digests match!");
+                } else {
+                    System.out.println("Expected: " + libInfo.minSha256Digest);
+                    System.out.println("Got: " + digestString);
+                }
 
-	            if (msg2.getResponseHeader().getStatusCode() != HttpStatusCode.OK) {
-	                // bail
-	            }
+                // And then return the un-minified version
 
-	            if (msg2.getResponseHeader().isEmpty()) {
-	                //bail
-	            }
-	            
-	            // Redirect to the un-minified resource
-	            HttpResponseHeader redirectHeader = new HttpResponseHeader("HTTP/1.1 307");
-	            redirectHeader.setHeader("location", libInfo.maxURI);
-	            msg.setResponseHeader(redirectHeader);
-	            msg.setResponseBody(new HttpResponseBody());
-	            
-	            // Or, we could return the actual resource
-	            //msg.setResponseHeader(msg2.getResponseHeader());
-	            //msg.setResponseBody(msg2.getResponseBody());
-			}
-		} catch (URIException e) {
-		} catch (HttpMalformedHeaderException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NullPointerException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return true;
-	}
+                final HttpMessage msg2 = new HttpMessage(new URI(libInfo.maxURI, true));
+                HttpSender httpSender =
+                        new HttpSender(
+                                Model.getSingleton().getOptionsParam().getConnectionParam(),
+                                true,
+                                HttpSender.MANUAL_REQUEST_INITIATOR);
+                httpSender.sendAndReceive(msg2, true);
 
+                if (msg2.getResponseHeader().getStatusCode() != HttpStatusCode.OK) {
+                    // bail
+                }
+
+                if (msg2.getResponseHeader().isEmpty()) {
+                    // bail
+                }
+
+                // Redirect to the un-minified resource
+                HttpResponseHeader redirectHeader = new HttpResponseHeader("HTTP/1.1 307");
+                redirectHeader.setHeader("location", libInfo.maxURI);
+                msg.setResponseHeader(redirectHeader);
+                msg.setResponseBody(new HttpResponseBody());
+
+                // Or, we could return the actual resource
+                // msg.setResponseHeader(msg2.getResponseHeader());
+                // msg.setResponseBody(msg2.getResponseBody());
+            }
+        } catch (URIException e) {
+        } catch (HttpMalformedHeaderException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NullPointerException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return true;
+    }
 }
