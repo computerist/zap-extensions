@@ -144,8 +144,7 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
 	            }
 	            
 	            // Redirect to the un-minified resource
-	            HttpResponseHeader redirectHeader = new HttpResponseHeader();
-	            redirectHeader.setStatusCode(307);
+	            HttpResponseHeader redirectHeader = new HttpResponseHeader("HTTP/1.1 307");
 	            redirectHeader.setHeader("location", libInfo.maxURI);
 	            msg.setResponseHeader(redirectHeader);
 	            msg.setResponseBody(new HttpResponseBody());
