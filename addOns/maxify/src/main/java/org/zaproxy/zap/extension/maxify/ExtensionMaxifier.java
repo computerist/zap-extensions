@@ -14,6 +14,7 @@ import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HttpMalformedHeaderException;
 import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.network.HttpResponseHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.parosproxy.paros.network.HttpStatusCode;
 import org.parosproxy.paros.view.View;
@@ -118,7 +119,8 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
 				
 				// We can compare the served version with the expected digest of the minified script
 				if (digestString.equals(libInfo.minSha256Digest)) {
-					System.out.println("Minified script digests do not match:");
+					System.out.println("Minified script digests match!");
+				} else {
 					System.out.println("Expected: " + libInfo.minSha256Digest);
 					System.out.println("Got: " + digestString);
 				}
@@ -137,11 +139,20 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
 	                // bail
 	            }
 
-	            if (msg.getResponseHeader().isEmpty()) {
+	            if (msg2.getResponseHeader().isEmpty()) {
 	                //bail
 	            }
-	            msg.setResponseHeader(msg2.getResponseHeader());
-	            msg.setResponseBody(msg2.getResponseBody());
+	            
+	            // Redirect to the un-minified resource
+	            HttpResponseHeader redirectHeader = new HttpResponseHeader();
+	            redirectHeader.setStatusCode(307);
+	            redirectHeader.setHeader("location", libInfo.maxURI);
+	            msg.setResponseHeader(redirectHeader);
+	            msg.setResponseBody(new HttpResponseBody());
+	            
+	            // Or, we could return the actual resource
+	            //msg.setResponseHeader(msg2.getResponseHeader());
+	            //msg.setResponseBody(msg2.getResponseBody());
 			}
 		} catch (URIException e) {
 		} catch (HttpMalformedHeaderException e) {
