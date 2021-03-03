@@ -17,14 +17,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.zaproxy.zap.extension.maxify;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
+import org.apache.commons.io.IOUtils;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.proxy.ProxyListener;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
@@ -35,12 +39,10 @@ import org.parosproxy.paros.network.HttpMessage;
 import org.parosproxy.paros.network.HttpResponseHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.parosproxy.paros.network.HttpStatusCode;
-import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.network.HttpResponseBody;
-import org.zaproxy.zap.view.ZapMenuItem;
 
 class LibInfo {
-    String filename;
+    String name;
     String minSha256Digest;
     String maxSha256Digest;
     String minURI;
@@ -50,8 +52,7 @@ class LibInfo {
 public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener {
     private static final String NAME = "Maxify";
     private static final String PREFIX = "maxify";
-
-    private ZapMenuItem menuMaxifier;
+    private static final String MAXIFY_JSON = "maxify/maxify.json";
 
     private Map<String, LibInfo> libsByFilename;
 
@@ -59,52 +60,45 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
         super(NAME);
         setI18nPrefix(PREFIX);
 
-        this.libsByFilename = new HashMap<String, LibInfo>();
-        LibInfo jquery224 = new LibInfo();
-        jquery224.filename = "jquery-2.2.4.min.js";
-        jquery224.minURI = "https://code.jquery.com/jquery-2.2.4.min.js";
-        jquery224.minSha256Digest = "BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=";
-        jquery224.maxURI = "https://code.jquery.com/jquery-2.2.4.js";
-        jquery224.maxSha256Digest = "iT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI=";
-        this.libsByFilename.put(jquery224.filename, jquery224);
+        this.libsByFilename = new HashMap<>();
+
+        try {
+            File configFile = new File(Constant.getZapHome(), MAXIFY_JSON);
+            FileInputStream fis = new FileInputStream(configFile);
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            IOUtils.copy(fis, os);
+            String json = new String(os.toByteArray());
+
+            JSONObject jsonObject = JSONObject.fromObject( json );
+            JSONArray libs  = (JSONArray) jsonObject.get("libraries");
+
+            for (Object libObj: libs) {
+                JSONObject lib = (JSONObject) libObj;
+
+                LibInfo libInfo = new LibInfo();
+                libInfo.name = lib.getString("name");
+                libInfo.minURI = lib.getString("minURI");
+                libInfo.minSha256Digest = lib.getString("minSha256Digest");
+                libInfo.maxURI = lib.getString("maxURI");
+                libInfo.maxSha256Digest = lib.getString("maxSha256Digest");
+                this.libsByFilename.put(libInfo.name, libInfo);
+            }
+
+            fis.close();
+            os.close();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
     }
 
     @Override
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
 
-        // this.api = new MaxifierAPI(this);
-        // extensionHook.addApiImplementor(this.api);
-
         // As long as we're not running as a daemon
         if (getView() != null) {
             extensionHook.getProxyListenerList().add(this);
-            // extensionHook.getHookMenu().addToolsMenuItem(getMenuMaxifier());
-            // extensionHook.getHookMenu().addPopupMenuItem(getPopupMsgMenuExample());
-            // extensionHook.getHookView().addStatusPanel(getStatusPanel());
         }
-    }
-
-    private ZapMenuItem getMenuMaxifier() {
-        if (menuMaxifier == null) {
-            menuMaxifier = new ZapMenuItem(PREFIX + ".topmenu.tools.title");
-
-            menuMaxifier.addActionListener(
-                    new java.awt.event.ActionListener() {
-                        @Override
-                        public void actionPerformed(java.awt.event.ActionEvent ae) {
-                            // This is where you do what you want to do.
-                            // In this case we'll just show a popup message.
-                            View.getSingleton()
-                                    .showMessageDialog(
-                                            Constant.messages.getString(
-                                                    PREFIX + ".topmenu.tools.msg"));
-                            // And display a file included with the add-on in the Output tab
-                            // displayFile(EXAMPLE_FILE);
-                        }
-                    });
-        }
-        return menuMaxifier;
     }
 
     @Override
@@ -125,13 +119,10 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
         try {
             HttpResponseBody body = msg.getResponseBody();
             URI requestURI = msg.getRequestHeader().getURI();
-            System.out.println("Inspecting... " + requestURI);
             String path = requestURI.getPath();
             int sepPos = path.lastIndexOf('/');
             String filename = sepPos >= 0 ? path.substring(sepPos + 1) : path;
-            System.out.println("Filename is " + filename);
             if (this.libsByFilename.containsKey(filename)) {
-                System.out.println("filename matches!");
                 LibInfo libInfo = this.libsByFilename.get(filename);
                 String digestString = DigestUtils.sha256Hex(body.getBytes());
 
@@ -144,7 +135,6 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
                 }
 
                 // And then return the un-minified version
-
                 final HttpMessage msg2 = new HttpMessage(new URI(libInfo.maxURI, true));
                 HttpSender httpSender =
                         new HttpSender(
@@ -166,10 +156,6 @@ public class ExtensionMaxifier extends ExtensionAdaptor implements ProxyListener
                 redirectHeader.setHeader("location", libInfo.maxURI);
                 msg.setResponseHeader(redirectHeader);
                 msg.setResponseBody(new HttpResponseBody());
-
-                // Or, we could return the actual resource
-                // msg.setResponseHeader(msg2.getResponseHeader());
-                // msg.setResponseBody(msg2.getResponseBody());
             }
         } catch (URIException e) {
         } catch (HttpMalformedHeaderException e) {

@@ -1,0 +1,18 @@
+{
+  "libraries" : [
+    {
+      "name" : "jquery-2.2.4.min.js",
+      "minURI" : "https://code.jquery.com/jquery-2.2.4.min.js",
+      "minSha256Digest" : "BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=",
+      "maxURI" : "https://code.jquery.com/jquery-2.2.4.js",
+      "maxSha256Digest" : "BiT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI="
+    },
+    {
+      "name" : "jquery-2.2.3.min.js",
+      "minURI" : "https://code.jquery.com/jquery-2.2.3.min.js",
+      "minSha256Digest" : "BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=",
+      "maxURI" : "https://code.jquery.com/jquery-2.2.3.js",
+      "maxSha256Digest" : "BiT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI="
+    }
+  ]
+}
